@@ -1,4 +1,25 @@
-# Kinetic Lab v0.1
+# Kinetic Lab v0.2 · 수정사항
+- 화면을 데이터 입력 / 오염물질 / 산화제 / 조건 비교 / 산화제 이용 / Figure Builder의 6개 탭으로 재구성.
+- 산화제는 기본 피팅 없음. 별도의 모델·정규화·A 고정·피팅 구간·반복 피팅 설정 지원.
+- 조건 비교 탭에 오염물질과 산화제 k 비교·조건 회귀를 각각 제공. 회귀 기본 None이며 Linear/Quadratic 선택 시 성공 상태와 식 표시.
+- 회귀표: Intercept=절편, Slope=기울기, Quadratic coefficient=2차항 계수.
+- 박스형 그래프 기본, 눈금은 아래·왼쪽만. 상단/오른쪽 테두리는 공통 설정에서 해제 가능.
+- Open 마커 기본, 마커 모양은 기호+이름 드롭다운 8종. 조건별 Open/Filled 선택, 테두리 두께 공통 설정.
+- 팔레트 Muted / Colorblind / Deep muted. Pastel 제거.
+- 각 그래프 아래 그래프 설정에서 legend·위치·실험점·피팅선·회귀식 독립 설정. Figure Builder와 동일 적용.
+- 눈금 간격: 10을 넣으면 10 단위. 빈칸 자동. 축 범위 min,max.
+- 첨자 입력 예: $S_2O_8^{2-}$ / $C/C_0$ / $k$ ($min^{-1}$). 축 제목 입력 후 렌더링 미리보기 제공.
+- Figure Builder에서 설정 JSON 저장. 사이드바에서 해당 JSON 업로드 후 '설정 적용'. 데이터는 별도로 업로드. 같은 조건 이름의 스타일·공통 스타일·분석·축·panel 설정 복원.
+- v0.1 JSON은 복원 지원하지 않음. 입력열 매핑은 데이터마다 다시 지정.
+- 조건 스타일은 condition 이름 기준. 다른 조건 이름의 파일에 복원하면 일치하는 조건만 적용.
+- JSON은 그래프/분석 설정을 복원하며 원데이터는 포함하지 않음. 분석 기록 ZIP의 input_canonical.csv를 다시 업로드 가능.
+- 표의 k는 파일명과 화면에서 pollutant/oxidant를 구분. 모델 변경 시 k 단위도 변경.
+- 산화제의 다단계/plateau 소모는 단순 모델에 부적합할 수 있어 잔차 확인 필요.
+
+UI 검사: 폴더에서 `python -m unittest test_ui -v` 실행 (기본 계산 검사는 test_analysis).
+
+
+# Kinetic Lab v0.2
 
 오염물질 제거 batch 실험용 Streamlit 앱. 로컬 PC에서 실행하며 업로드 데이터는 이 앱에서 외부 서비스로 전송하지 않습니다.
 
@@ -65,15 +86,15 @@ Wide에서는 시간열과 여러 농도열을 선택하고 각 농도열에 con
 Δ의 공유 C0, x축 측정오차, 시간점의 비독립성은 현재 OLS CI에 반영되지 않습니다. 탐색적 지표로 해석하세요.
 
 ## Figure / 기록
-Muted, Pastel, Colorblind 팔레트. 개별 HEX와 Matplotlib marker(o,s,^,D,v,P,X 등) 수정 가능.
+Muted, Colorblind, Deep muted 팔레트. 개별 HEX와 마커 이름 드롭다운, Open/Filled 선택 가능.
 폰트, 축/눈금/legend 크기, 선, marker, panel 크기, 축 범위와 간격, panel 순서 조정.
 Arial/Times New Roman은 PC에 설치되어 있어야 하며 없으면 대체 폰트가 사용됩니다.
-TIFF/PNG 300/600/1200 dpi, PDF/SVG vector. 지나치게 밝은 pastel은 작은 점/인쇄에서 구분을 확인하세요.
-분석 기록 ZIP에는 canonical 입력, k 결과, 개별 피팅, 잔차, Δ농도, 설정 JSON을 저장합니다. 설정 JSON 재업로드 복원은 이 버전에서 지원하지 않습니다.
+TIFF/PNG 300/600/1200 dpi, PDF/SVG vector. 작은 점/인쇄에서 구분을 확인하세요.
+분석 기록 ZIP에는 canonical 입력, k 결과, 개별 피팅, 잔차, Δ농도, 설정 JSON을 저장합니다. 설정 JSON은 사이드바에서 재업로드 후 적용하여 복원합니다.
 웹 세션 재시작 전 필요한 결과를 다운로드하세요.
 
 ## 포함 기능과 향후 확장
-이 버전은 연구실 시험용입니다. custom equation, weighted fit, bootstrap/profile CI, ODR, 외부표준 농도 환산, project 설정 자동 복원은 포함하지 않습니다.
+이 버전은 연구실 시험용입니다. custom equation, weighted fit, bootstrap/profile CI, ODR, 외부표준 농도 환산, 입력열 매핑 자동 복원은 포함하지 않습니다.
 실제 연구 데이터 한 세트를 Prism과 같은 식/A 고정/시간범위/가중치로 비교한 후 연구실 배포를 권장합니다.
 
 ## 검증
@@ -86,3 +107,4 @@ Streamlit AppTest로 기본 흐름과 반복별 피팅/조건 Linear 회귀/mol 
 ## 참고
 SciPy curve_fit: https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.curve_fit.html
 Streamlit: https://docs.streamlit.io/
+
