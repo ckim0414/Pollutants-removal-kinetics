@@ -117,3 +117,8 @@ Streamlit: https://docs.streamlit.io/
 - 축 설정은 수정할 패널 이름의 '그래프 설정'에서 입력. Enter 또는 입력칸을 벗어나면 해당 그래프와 Figure Builder가 갱신됨.
 - 기본/변경 설정의 실제 출력 Figure에 대해 사용자 Y축 제목, 7 단위 X축 눈금, Serif 폰트 적용을 검증 (test_render.py).
 - Windows 시작 파일 실행 전 이전 앱을 Ctrl+C로 종료하고 새 폴더의 start_windows.bat를 실행하세요. 이전 앱이 켜져 있으면 새 앱이 다른 포트를 사용할 수 있습니다.
+
+# v0.4
+조건 비교 탭의 k 비교 그래프 형태에서 Bar/Scatter를 선택합니다. 두 개를 동시에 그리지 않습니다.
+Bar는 조건 이름의 범주축, Scatter는 조건 스타일 표의 숫자 x값을 사용합니다. 조건 회귀선은 Scatter에서 표시합니다.
+Figure Builder의 Pollutant k comparison / Oxidant k comparison은 선택한 형태와 설정을 그대로 사용합니다.

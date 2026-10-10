@@ -12,7 +12,7 @@ import streamlit as st
 from analysis import validate,baseline,fit,regression,MODELS,demo
 
 st.set_page_config(page_title='Kinetic Lab',layout='wide')
-st.title('Kinetic Lab v0.3')
+st.title('Kinetic Lab v0.4')
 st.caption('농도 입력 · 독립적인 오염물질/산화제 분석 · 일관된 논문 figure')
 PALETTES={'Muted':['#6487A2','#C58C65','#789780','#A184A2','#8A8A8A','#B6A46B','#709DA1','#B57882'],'Colorblind':['#0072B2','#D55E00','#009E73','#CC79A7','#777777','#E69F00','#56B4E9','#A79B00'],'Deep muted':['#334E68','#356D69','#9A5348','#777548','#765A79','#586675','#986E3F','#805766']}
 MARKERS={'○ 원':'o','□ 사각형':'s','△ 위 삼각형':'^','▽ 아래 삼각형':'v','◇ 마름모':'D','⬡ 육각형':'h','◁ 왼쪽 삼각형':'<','▷ 오른쪽 삼각형':'>'}
@@ -24,7 +24,7 @@ with st.sidebar:
     if st.button('설정 적용',disabled=cfgup is None):
         try:
             payload=json.loads(cfgup.getvalue());widgets=payload['widgets'];savedstyles=payload.get('styles',[])
-            if payload.get('version') not in ['0.2','0.3'] or not isinstance(widgets,dict) or not isinstance(savedstyles,list):raise ValueError('v0.2 또는 v0.3 설정 파일이 필요합니다.')
+            if payload.get('version') not in ['0.2','0.3','0.4'] or not isinstance(widgets,dict) or not isinstance(savedstyles,list):raise ValueError('v0.2~v0.4 설정 파일이 필요합니다.')
             allowed=('global_','p_','o_','plot_','effect_','util_','builder_','units_')
             for key in list(st.session_state):
                 if key.startswith(allowed) or key.startswith('style_editor_'):del st.session_state[key]
@@ -260,9 +260,10 @@ with tabs[3]:
         if a['summary'].empty:continue
         st.subheader('오염물질' if col=='pollutant' else '산화제')
         prefix='effect_'+col+'_';cs=st.columns(3)
-        kind=cs[0].selectbox('조건–k 회귀',['None','Linear','Quadratic'],key=prefix+'kind');error=cs[1].selectbox('k Error bar',['95% CI','SE','반복 k의 SD','없음'],key=prefix+'error');bar=cs[2].checkbox('k 비교를 막대그래프로',True,key=prefix+'bar')
+        kind=cs[0].selectbox('조건–k 회귀',['None','Linear','Quadratic'],key=prefix+'kind');error=cs[1].selectbox('k Error bar',['95% CI','SE','반복 k의 SD','없음'],key=prefix+'error');chart=cs[2].selectbox('k 비교 그래프 형태',['Bar','Scatter'],key=prefix+'chart');bar=chart=='Bar'
         xname=st.text_input('조건 X축 제목','Stirring speed (rpm)',key=prefix+'xname');reg=None
         if error=='반복 k의 SD' and a['cfg']['strategy']=='mean':st.warning('반복 k의 SD는 각 반복실험 별도 피팅에서만 표시됩니다.')
+        if bar:st.caption('Bar: 조건 이름으로 비교합니다. Scatter를 선택하면 숫자 조건 x값과 회귀선을 표시합니다.')
         if kind=='None':st.info('조건 회귀 꺼짐 · Linear 또는 Quadratic을 선택하면 선을 계산합니다.')
         else:
             try:
@@ -271,9 +272,9 @@ with tabs[3]:
                 regtables.append(reg[0].assign(group=col+'_condition',R2=reg[2]))
             except Exception as e:st.warning('조건 회귀 피팅 실패: '+str(e))
         opts=dict(error=error,bar=bar,xname=xname)
-        for effect in [False,True]:
-            name=col.capitalize()+(' condition effect' if effect else ' k comparison');graph_settings(name,effect)
-            plots[name]=lambda ax,col=col,name=name,opts=opts,effect=effect,reg=reg:kplot(ax,col,name,opts,effect,reg);render(name)
+        effect=not bar
+        name=col.capitalize()+' k comparison';graph_settings(name,effect)
+        plots[name]=lambda ax,col=col,name=name,opts=opts,effect=effect,reg=reg:kplot(ax,col,name,opts,effect,reg);render(name)
 
 delta=None;utilregs={}
 with tabs[4]:
@@ -314,9 +315,11 @@ with tabs[4]:
         except Exception as e:st.warning(str(e))
 with tabs[5]:
     st.caption('패널별 legend·축·표시 옵션은 각 분석 탭의 그래프 설정을 따릅니다. 선택 순서가 panel 순서입니다.')
-    defaults=[n for n in ['Pollutant kinetics','Pollutant condition effect','Oxidant kinetics','Oxidant utilization'] if n in plots]
+    defaults=[n for n in ['Pollutant kinetics','Pollutant k comparison','Oxidant kinetics','Oxidant utilization'] if n in plots]
     # Prevent old selections of a disabled oxidant fit from invalidating the builder.
-    if 'builder_selected' in st.session_state:st.session_state['builder_selected']=[n for n in st.session_state['builder_selected'] if n in plots]
+    if 'builder_selected' in st.session_state:
+        renamed=[n.replace(' condition effect',' k comparison') for n in st.session_state['builder_selected']]
+        st.session_state['builder_selected']=list(dict.fromkeys(n for n in renamed if n in plots))
     selected=st.multiselect('Panel 순서',list(plots),default=None if 'builder_selected' in st.session_state else defaults,key='builder_selected')
     cs=st.columns(3);ncol=cs[0].selectbox('열 수',[1,2,3],index=1,key='builder_ncol');spacing=cs[1].slider('Panel 간격',.2,1.,.45,key='builder_spacing');labels=cs[2].checkbox('(a), (b) Panel 이름',True,key='builder_labels')
     if selected:
@@ -330,12 +333,12 @@ with tabs[5]:
         except Exception as e:st.error('Figure 설정 확인: '+str(e))
         finally:plt.close(fig)
     allowed=('global_','p_','o_','plot_','effect_','util_','builder_','units_')
-    settings={'version':'0.3','widgets':{k:v for k,v in st.session_state.items() if k.startswith(allowed)},'styles':meta.to_dict('records')}
+    settings={'version':'0.4','widgets':{k:v for k,v in st.session_state.items() if k.startswith(allowed)},'styles':meta.to_dict('records')}
     settings_json=json.dumps(settings,ensure_ascii=False,indent=2)
-    st.download_button('설정 JSON 저장',settings_json.encode(),'settings_v03.json')
+    st.download_button('설정 JSON 저장',settings_json.encode(),'settings_v04.json')
     bundle=io.BytesIO()
     with zipfile.ZipFile(bundle,'w',zipfile.ZIP_DEFLATED) as z:
-        z.writestr('input_canonical.csv',d.to_csv(index=False));z.writestr('settings_v03.json',settings_json)
+        z.writestr('input_canonical.csv',d.to_csv(index=False));z.writestr('settings_v04.json',settings_json)
         for col,a in analyses.items():
             z.writestr(f'kinetic_{col}.csv',a['summary'].to_csv(index=False));z.writestr(f'residuals_{col}.csv',a['residual'].to_csv(index=False))
             if a['curves']:z.writestr(f'individual_fits_{col}.csv',pd.concat([pd.DataFrame(v) for v in a['curves'].values()]).to_csv(index=False))
