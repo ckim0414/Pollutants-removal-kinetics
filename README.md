@@ -108,3 +108,12 @@ Streamlit AppTest로 기본 흐름과 반복별 피팅/조건 Linear 회귀/mol 
 SciPy curve_fit: https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.curve_fit.html
 Streamlit: https://docs.streamlit.io/
 
+
+# v0.3 적용 안내
+- 그래프 화면을 실제 Figure에서 새로 생성한 PNG 바이트로 표시하여 제목/눈금 변경을 출력 파일과 같은 그림에 반영.
+- 축 제목, 눈금 텍스트, legend에 폰트를 명시적으로 적용. 폰트 목록은 실행 PC에 설치된 폰트만 제공하여 누락 폰트의 무표시 대체를 방지.
+- 마커 Open(흰색 채움) / Hollow(투명, 배경이 비침) / Filled(색 채움).
+- v0.2/v0.3 설정 JSON 복원 지원.
+- 축 설정은 수정할 패널 이름의 '그래프 설정'에서 입력. Enter 또는 입력칸을 벗어나면 해당 그래프와 Figure Builder가 갱신됨.
+- 기본/변경 설정의 실제 출력 Figure에 대해 사용자 Y축 제목, 7 단위 X축 눈금, Serif 폰트 적용을 검증 (test_render.py).
+- Windows 시작 파일 실행 전 이전 앱을 Ctrl+C로 종료하고 새 폴더의 start_windows.bat를 실행하세요. 이전 앱이 켜져 있으면 새 앱이 다른 포트를 사용할 수 있습니다.

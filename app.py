@@ -4,6 +4,7 @@ import pandas as pd
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+from matplotlib import font_manager
 from matplotlib.ticker import MultipleLocator
 from matplotlib.colors import is_color_like
 from scipy.stats import t as student_t
@@ -11,7 +12,7 @@ import streamlit as st
 from analysis import validate,baseline,fit,regression,MODELS,demo
 
 st.set_page_config(page_title='Kinetic Lab',layout='wide')
-st.title('Kinetic Lab v0.2')
+st.title('Kinetic Lab v0.3')
 st.caption('농도 입력 · 독립적인 오염물질/산화제 분석 · 일관된 논문 figure')
 PALETTES={'Muted':['#6487A2','#C58C65','#789780','#A184A2','#8A8A8A','#B6A46B','#709DA1','#B57882'],'Colorblind':['#0072B2','#D55E00','#009E73','#CC79A7','#777777','#E69F00','#56B4E9','#A79B00'],'Deep muted':['#334E68','#356D69','#9A5348','#777548','#765A79','#586675','#986E3F','#805766']}
 MARKERS={'○ 원':'o','□ 사각형':'s','△ 위 삼각형':'^','▽ 아래 삼각형':'v','◇ 마름모':'D','⬡ 육각형':'h','◁ 왼쪽 삼각형':'<','▷ 오른쪽 삼각형':'>'}
@@ -23,7 +24,7 @@ with st.sidebar:
     if st.button('설정 적용',disabled=cfgup is None):
         try:
             payload=json.loads(cfgup.getvalue());widgets=payload['widgets'];savedstyles=payload.get('styles',[])
-            if payload.get('version')!='0.2' or not isinstance(widgets,dict) or not isinstance(savedstyles,list):raise ValueError('v0.2 설정 파일이 필요합니다.')
+            if payload.get('version') not in ['0.2','0.3'] or not isinstance(widgets,dict) or not isinstance(savedstyles,list):raise ValueError('v0.2 또는 v0.3 설정 파일이 필요합니다.')
             allowed=('global_','p_','o_','plot_','effect_','util_','builder_','units_')
             for key in list(st.session_state):
                 if key.startswith(allowed) or key.startswith('style_editor_'):del st.session_state[key]
@@ -35,7 +36,14 @@ with st.sidebar:
         except Exception as e:st.error(str(e))
     st.header('공통 그래프 스타일')
     palette=st.selectbox('Palette',list(PALETTES),key='global_palette')
-    font=st.selectbox('Font',['DejaVu Sans','Arial','Times New Roman'],key='global_font')
+    available_fonts=sorted({f.name for f in font_manager.fontManager.ttflist if 'Display' not in f.name})
+    preferred=[f for f in ['DejaVu Sans','DejaVu Serif','Arial','Times New Roman','Calibri','Malgun Gothic','Nimbus Sans','Nimbus Roman'] if f in available_fonts]
+    font_choices=preferred+[f for f in available_fonts if f not in preferred]
+    if st.session_state.get('global_font',font_choices[0]) not in font_choices:
+        st.warning('저장된 폰트가 이 PC에 없어 DejaVu Sans로 변경합니다.')
+        st.session_state['global_font']='DejaVu Sans'
+    font=st.selectbox('Font (설치된 폰트)',font_choices,key='global_font')
+    st.caption('실제 설치된 폰트만 표시합니다. Serif를 선택하면 변화가 쉽게 보입니다.')
     fs=st.number_input('축 제목 크기',6,30,12,key='global_fs');ticks=st.number_input('눈금 크기',6,30,10,key='global_ticks');leg=st.number_input('Legend 크기',6,25,9,key='global_leg')
     ms=st.slider('마커 크기',2.,12.,6.,key='global_ms');edge=st.slider('마커 테두리 두께',.3,3.,1.2,key='global_edge');lw=st.slider('선 두께',.5,3.,1.4,key='global_lw')
     boxed=st.checkbox('상단·오른쪽 테두리 표시',True,key='global_box')
@@ -90,11 +98,11 @@ with tabs[0]:
                 if col in restored[c]:meta.loc[i,col]=restored[c][col]
     signature=hashlib.sha256((''.join(conditions)+palette).encode()).hexdigest()[:12]
     st.subheader('조건 스타일 · 모든 패널에서 공유')
-    meta=st.data_editor(meta,hide_index=True,disabled=['condition'],key='style_editor_'+signature,column_config={'marker':st.column_config.SelectboxColumn('마커',options=list(MARKERS),required=True),'fill':st.column_config.SelectboxColumn('채움',options=['Open','Filled'],required=True)})
-    if not all(is_color_like(c) for c in meta.color) or not meta.marker.isin(MARKERS).all() or not meta.fill.isin(['Open','Filled']).all():st.error('색(HEX), 마커, 채움을 확인하세요.');st.stop()
+    meta=st.data_editor(meta,hide_index=True,disabled=['condition'],key='style_editor_'+signature,column_config={'marker':st.column_config.SelectboxColumn('마커',options=list(MARKERS),required=True),'fill':st.column_config.SelectboxColumn('채움',options=['Open','Hollow','Filled'],required=True)})
+    if not all(is_color_like(c) for c in meta.color) or not meta.marker.isin(MARKERS).all() or not meta.fill.isin(['Open','Hollow','Filled']).all():st.error('색(HEX), 마커, 채움을 확인하세요.');st.stop()
     if not np.isfinite(pd.to_numeric(meta.x,errors='coerce')).all():st.error('조건 x값은 유한한 숫자여야 합니다.');st.stop()
     styles=meta.set_index('condition').to_dict('index')
-    st.caption('같은 마커·색을 지정하고 Open/Filled만 바꾸면 관련 실험을 묶을 수 있습니다. 독립 batch 반복과 기기 반복주입을 구분하세요.')
+    st.caption('Open=흰색 채움, Hollow=투명, Filled=색 채움. 같은 마커·색을 지정하고 채움만 바꾸면 관련 실험을 묶을 수 있습니다. 독립 batch 반복과 기기 반복주입을 구분하세요.')
     with st.expander('단위'):
         timeunit=st.text_input('시간 단위','min',key='units_time');punit=st.text_input('오염물질 농도 단위','mg/L',key='units_p');ounit=st.text_input('산화제 농도 단위','mM',key='units_o')
     st.dataframe(d.head(20),hide_index=True)
@@ -102,7 +110,7 @@ with tabs[0]:
 analyses={};options={};plots={};regtables=[]
 def marker_style(cond):
     s=styles[cond]
-    return dict(color=s['color'],marker=MARKERS[s['marker']],label=s['label'],markersize=ms,markeredgewidth=edge,markeredgecolor=s['color'],markerfacecolor='white' if s['fill']=='Open' else s['color'])
+    return dict(color=s['color'],marker=MARKERS[s['marker']],label=s['label'],markersize=ms,markeredgewidth=edge,markeredgecolor=s['color'],markerfacecolor=('none' if s['fill']=='Hollow' else 'white' if s['fill']=='Open' else s['color']))
 
 def graph_settings(name,default_legend=True):
     prefix='plot_'+name+'_'
@@ -122,7 +130,7 @@ def graph_settings(name,default_legend=True):
     options[name]=dict(legend=legend,loc=loc,points=points,lines=lines,equation=equation,xlabel=xlabel,ylabel=ylabel,xlim=xlim,ylim=ylim,xtick=xtick,ytick=ytick)
 
 def finish(ax,name,xlabel,ylabel):
-    op=options[name];ax.set_xlabel(op['xlabel'] or xlabel);ax.set_ylabel(op['ylabel'] or ylabel)
+    op=options[name];ax.set_xlabel(op['xlabel'] or xlabel,fontfamily=font);ax.set_ylabel(op['ylabel'] or ylabel,fontfamily=font)
     for axis in ['x','y']:
         if op[axis+'lim']:
             bounds=list(map(float,op[axis+'lim'].split(',')))
@@ -133,12 +141,19 @@ def finish(ax,name,xlabel,ylabel):
             if not np.isfinite(step) or step<=0:raise ValueError('눈금 간격은 유한한 양수여야 합니다.')
             getattr(ax,axis+'axis').set_major_locator(MultipleLocator(step))
     ax.tick_params(top=False,right=False,labelsize=ticks)
-    if op['legend'] and ax.get_legend_handles_labels()[0]:ax.legend(frameon=False,loc=op['loc'])
+    for text in ax.get_xticklabels()+ax.get_yticklabels()+ax.texts:
+        text.set_fontfamily(font)
+    if op['legend'] and ax.get_legend_handles_labels()[0]:ax.legend(frameon=False,loc=op['loc'],prop={'family':font,'size':leg})
+
+def show_figure(fig):
+    # Explicit image bytes ensure the display uses the same updated Figure as export.
+    preview_bytes=io.BytesIO();fig.savefig(preview_bytes,format='png',dpi=150,bbox_inches='tight',facecolor='white')
+    st.image(preview_bytes.getvalue())
 
 def render(name):
     fig,ax=plt.subplots(figsize=(width,height))
     try:
-        plots[name](ax);fig.tight_layout();st.pyplot(fig)
+        plots[name](ax);fig.tight_layout();show_figure(fig)
         buf=io.BytesIO();fig.savefig(buf,format=fmt,dpi=dpi,bbox_inches='tight',facecolor='white');st.download_button('그래프 저장 · '+name,buf.getvalue(),name.replace(' ','_')+'.'+fmt,key='download_'+name)
     except Exception as e:st.error(name+': '+str(e))
     finally:plt.close(fig)
@@ -311,16 +326,16 @@ with tabs[5]:
                 if i>=len(selected):ax.set_visible(False);continue
                 plots[selected[i]](ax)
                 if labels:ax.text(-.15,1.07,f'({chr(97+i)})',transform=ax.transAxes,fontweight='bold',fontsize=fs+2)
-            fig.subplots_adjust(wspace=spacing,hspace=spacing);st.pyplot(fig);buf=io.BytesIO();fig.savefig(buf,format=fmt,dpi=dpi,bbox_inches='tight',facecolor='white');st.download_button('완성 Figure 저장',buf.getvalue(),'publication_figure.'+fmt)
+            fig.subplots_adjust(wspace=spacing,hspace=spacing);show_figure(fig);buf=io.BytesIO();fig.savefig(buf,format=fmt,dpi=dpi,bbox_inches='tight',facecolor='white');st.download_button('완성 Figure 저장',buf.getvalue(),'publication_figure.'+fmt)
         except Exception as e:st.error('Figure 설정 확인: '+str(e))
         finally:plt.close(fig)
     allowed=('global_','p_','o_','plot_','effect_','util_','builder_','units_')
-    settings={'version':'0.2','widgets':{k:v for k,v in st.session_state.items() if k.startswith(allowed)},'styles':meta.to_dict('records')}
+    settings={'version':'0.3','widgets':{k:v for k,v in st.session_state.items() if k.startswith(allowed)},'styles':meta.to_dict('records')}
     settings_json=json.dumps(settings,ensure_ascii=False,indent=2)
-    st.download_button('설정 JSON 저장',settings_json.encode(),'settings_v02.json')
+    st.download_button('설정 JSON 저장',settings_json.encode(),'settings_v03.json')
     bundle=io.BytesIO()
     with zipfile.ZipFile(bundle,'w',zipfile.ZIP_DEFLATED) as z:
-        z.writestr('input_canonical.csv',d.to_csv(index=False));z.writestr('settings_v02.json',settings_json)
+        z.writestr('input_canonical.csv',d.to_csv(index=False));z.writestr('settings_v03.json',settings_json)
         for col,a in analyses.items():
             z.writestr(f'kinetic_{col}.csv',a['summary'].to_csv(index=False));z.writestr(f'residuals_{col}.csv',a['residual'].to_csv(index=False))
             if a['curves']:z.writestr(f'individual_fits_{col}.csv',pd.concat([pd.DataFrame(v) for v in a['curves'].values()]).to_csv(index=False))
